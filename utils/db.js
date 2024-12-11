@@ -1,7 +1,54 @@
 import { MongoClient } from 'mongodb';
 
 /**
+<<<<<<< HEAD
  * DBClient class for managing MongoDB connections and operations.
+=======
+ * @class DBClient
+ * @classdesc A client for interacting with a MongoDB database.
+ *
+ * @constructor
+ * Initializes a new instance of the DBClient class.
+ *
+ * @property {boolean} isConnected - Indicates whether the client is connected to the database.
+ * @property {MongoClient} client - The MongoDB client instance.
+ * @property {Db} db - The MongoDB database instance.
+ * @property {Collection} users - The users collection.
+ * @property {Collection} files - The files collection.
+ *
+ * @method isAlive
+ * @description Checks if the client is connected to the database.
+ * @returns {boolean} True if the client is connected, otherwise false.
+ *
+ * @method nbUsers
+ * @description Gets the number of users in the database.
+ * @returns {Promise<number>} The number of users.
+ *
+ * @method nbFiles
+ * @description Gets the number of files in the database.
+ * @returns {Promise<number>} The number of files.
+ *
+ * @method getUser
+ * @description Retrieves a user from the database based on the provided arguments.
+ * @param {Object} args - The arguments to find the user.
+ * @returns {Promise<Object|null>} The user document, or null if not found.
+ *
+ * @method addUser
+ * @description Adds a new user to the database.
+ * @param {Object} user - The user document to add.
+ * @returns {Promise<ObjectId>} The ID of the inserted user.
+ * @throws {Error} If the user already exists.
+ *
+ * @method getFile
+ * @description Retrieves a file from the database based on the provided arguments.
+ * @param {Object} args - The arguments to find the file.
+ * @returns {Promise<Object|null>} The file document, or null if not found.
+ *
+ * @method addFile
+ * @description Adds a new file to the database.
+ * @param {Object} file - The file document to add.
+ * @returns {Promise<ObjectId>} The ID of the inserted file.
+>>>>>>> d3853bef3dbe1639b25ab767ed2e515438761fb6
  */
 class DBClient {
     /**
@@ -29,54 +76,64 @@ class DBClient {
     async nbFiles() {}
 }
   constructor() {
-    const host = process.env.DB_HOST || 'localhost'; // Default to localhost
-    const port = process.env.DB_PORT || 27017; // Default to port 27017
-    const database = process.env.DB_DATABASE || 'files_manager'; // Default to files_manager
-
-    // MongoDB connection URI
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || '27017';
     const uri = `mongodb://${host}:${port}`;
-    this.client = new MongoClient(uri, { useUnifiedTopology: true });
-    this.databaseName = database;
 
-    // Connect to MongoDB
-    this.client.connect()
-      .then(() => {
-        this.db = this.client.db(this.databaseName);
-        console.log('Connected to MongoDB successfully.');
-      })
-      .catch((err) => {
-        console.error('Failed to connect to MongoDB:', err);
+    const dbName = process.env.DB_DATABASE || 'files_manager';
+
+    this.isConnected = false;
+
+    (async () => {
+      this.client = new MongoClient(uri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
       });
+
+      await this.client.connect();
+      this.db = this.client.db(dbName);
+      this.users = this.db.collection('users');
+      this.files = this.db.collection('files');
+      await this.db.command({ ping: 1 });
+      this.isConnected = true;
+    })();
   }
 
-  // Check if MongoDB is connected
   isAlive() {
-    return this.client && this.client.isConnected();
+    return this.isConnected;
   }
 
-  // Get the number of documents in the "users" collection
   async nbUsers() {
-    try {
-      const usersCollection = this.db.collection('users');
-      return await usersCollection.countDocuments();
-    } catch (err) {
-      console.error('Error counting users:', err);
-      return 0;
-    }
+    return this.users.countDocuments();
   }
 
-  // Get the number of documents in the "files" collection
   async nbFiles() {
-    try {
-      const filesCollection = this.db.collection('files');
-      return await filesCollection.countDocuments();
-    } catch (err) {
-      console.error('Error counting files:', err);
-      return 0;
+    return this.files.countDocuments();
+  }
+
+  async getUser(args) {
+    return this.users.findOne(args);
+  }
+
+  async addUser(user) {
+    const exists = await this.getUser({ email: user.email });
+    if (exists) {
+      throw new Error('Already exist');
     }
+
+    const insertedUser = await this.users.insertOne(user);
+    return insertedUser.insertedId;
+  }
+
+  async getFile(args) {
+    return this.files.findOne(args);
+  }
+
+  async addFile(file) {
+    const insertedFile = await this.files.insertOne(file);
+    return insertedFile.insertedId;
   }
 }
 
-// Export a single instance of the DBClient
 const dbClient = new DBClient();
 export default dbClient;
