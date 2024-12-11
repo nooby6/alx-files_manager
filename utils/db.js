@@ -1,6 +1,33 @@
 import { MongoClient } from 'mongodb';
 
+/**
+ * DBClient class for managing MongoDB connections and operations.
+ */
 class DBClient {
+    /**
+     * Creates an instance of DBClient.
+     * Initializes the MongoDB connection using environment variables or default values.
+     */
+    constructor() {}
+
+    /**
+     * Checks if MongoDB is connected.
+     * @returns {boolean} True if MongoDB is connected, otherwise false.
+     */
+    isAlive() {}
+
+    /**
+     * Gets the number of documents in the "users" collection.
+     * @returns {Promise<number>} The number of documents in the "users" collection.
+     */
+    async nbUsers() {}
+
+    /**
+     * Gets the number of documents in the "files" collection.
+     * @returns {Promise<number>} The number of documents in the "files" collection.
+     */
+    async nbFiles() {}
+}
   constructor() {
     const host = process.env.DB_HOST || 'localhost'; // Default to localhost
     const port = process.env.DB_PORT || 27017; // Default to port 27017
