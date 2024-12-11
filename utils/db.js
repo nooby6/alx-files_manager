@@ -2,54 +2,64 @@ import { MongoClient } from 'mongodb';
 
 class DBClient {
   constructor() {
-    const host = process.env.DB_HOST || 'localhost'; // Default to localhost
-    const port = process.env.DB_PORT || 27017; // Default to port 27017
-    const database = process.env.DB_DATABASE || 'files_manager'; // Default to files_manager
-
-    // MongoDB connection URI
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || '27017';
     const uri = `mongodb://${host}:${port}`;
-    this.client = new MongoClient(uri, { useUnifiedTopology: true });
-    this.databaseName = database;
 
-    // Connect to MongoDB
-    this.client.connect()
-      .then(() => {
-        this.db = this.client.db(this.databaseName);
-        console.log('Connected to MongoDB successfully.');
-      })
-      .catch((err) => {
-        console.error('Failed to connect to MongoDB:', err);
+    const dbName = process.env.DB_DATABASE || 'files_manager';
+
+    this.isConnected = false;
+
+    (async () => {
+      this.client = new MongoClient(uri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
       });
+
+      await this.client.connect();
+      this.db = this.client.db(dbName);
+      this.users = this.db.collection('users');
+      this.files = this.db.collection('files');
+      await this.db.command({ ping: 1 });
+      this.isConnected = true;
+    })();
   }
 
-  // Check if MongoDB is connected
   isAlive() {
-    return this.client && this.client.isConnected();
+    return this.isConnected;
   }
 
-  // Get the number of documents in the "users" collection
   async nbUsers() {
-    try {
-      const usersCollection = this.db.collection('users');
-      return await usersCollection.countDocuments();
-    } catch (err) {
-      console.error('Error counting users:', err);
-      return 0;
-    }
+    return this.users.countDocuments();
   }
 
-  // Get the number of documents in the "files" collection
   async nbFiles() {
-    try {
-      const filesCollection = this.db.collection('files');
-      return await filesCollection.countDocuments();
-    } catch (err) {
-      console.error('Error counting files:', err);
-      return 0;
+    return this.files.countDocuments();
+  }
+
+  async getUser(args) {
+    return this.users.findOne(args);
+  }
+
+  async addUser(user) {
+    const exists = await this.getUser({ email: user.email });
+    if (exists) {
+      throw new Error('Already exist');
     }
+
+    const insertedUser = await this.users.insertOne(user);
+    return insertedUser.insertedId;
+  }
+
+  async getFile(args) {
+    return this.files.findOne(args);
+  }
+
+  async addFile(file) {
+    const insertedFile = await this.files.insertOne(file);
+    return insertedFile.insertedId;
   }
 }
 
-// Export a single instance of the DBClient
 const dbClient = new DBClient();
 export default dbClient;
